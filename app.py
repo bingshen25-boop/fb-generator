@@ -133,13 +133,23 @@ def generate_image():
             )}],
             max_tokens=100,
         )
-        image_prompt = pr.choices[0].message.content.strip()
+       image_prompt = pr.choices[0].message.content.strip()
         encoded = urllib.parse.quote(image_prompt)
-        url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&nologo=true"
-        img_resp = __import__('requests').get(url, timeout=90)
-        if img_resp.status_code != 200:
-            return jsonify({"error": "圖片生成失敗，請再試一次"}), 500
-        img_bytes = img_resp.content
+        import requests as _req, time as _time
+        img_bytes = None
+        for attempt in range(3):
+            try:
+                url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&nologo=true&seed={attempt*7}"
+                img_resp = _req.get(url, timeout=90)
+                if img_resp.status_code == 200 and len(img_resp.content) > 5000:
+                    img_bytes = img_resp.content
+                    break
+            except Exception:
+                pass
+            if attempt < 2:
+                _time.sleep(3)
+        if not img_bytes:
+            return jsonify({"error": "圖片生成失敗，請再試一次（Pollinations 服務不穩定）"}), 500
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         (OUTPUT_DIR / f"generated_{timestamp}.png").write_bytes(img_bytes)
         return jsonify({
