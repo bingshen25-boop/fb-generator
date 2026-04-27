@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>傾青 · FB 貼文產生器</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600&family=Noto+Sans+TC:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --sage:    #7a9e7e;
+      --sage-lt: #c8dbc9;
+      --sage-dk: #4e7252;
+      --cream:   #f7f4ee;
+      --warm:    #e8e0d2;
+      --text:    #2c2c2a;
+      --muted:   #7a7870;
+      --white:   #ffffff;
+      --radius:  12px;
+      --shadow:  0 4px 20px rgba(0,0,0,.08);
+    }
+    body { font-family: 'Noto Sans TC', sans-serif; background: var(--cream); color: var(--text); min-height: 100vh; }
+
+    header { background: var(--sage-dk); padding: 20px 40px; display: flex; align-items: center; gap: 12px; }
+    header h1 { font-family: 'Noto Serif TC', serif; font-size: 1.3rem; color: var(--cream); letter-spacing: .08em; }
+
+    main { max-width: 1100px; margin: 0 auto; padding: 40px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+    @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+
+    .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px; }
+    .card h2 { font-family: 'Noto Serif TC', serif; font-size: 1rem; color: var(--sage-dk); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--warm); }
+
+    label { display: block; font-size: .82rem; color: var(--muted); margin-bottom: 5px; margin-top: 14px; }
+    input[type="text"], select, textarea { width: 100%; padding: 10px 14px; border: 1.5px solid var(--warm); border-radius: 8px; font-family: 'Noto Sans TC', sans-serif; font-size: .9rem; color: var(--text); background: var(--cream); outline: none; transition: border-color .2s; }
+    input[type="text"]:focus, select:focus, textarea:focus { border-color: var(--sage); }
+    textarea { resize: vertical; min-height: 130px; }
+
+    /* 語氣按鈕組 */
+    .tone-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+    .tone-btn { padding: 6px 14px; border: 1.5px solid var(--warm); border-radius: 20px; background: var(--cream); font-family: 'Noto Sans TC', sans-serif; font-size: .82rem; color: var(--muted); cursor: pointer; transition: all .2s; }
+    .tone-btn:hover { border-color: var(--sage); color: var(--sage-dk); }
+    .tone-btn.active { background: var(--sage-dk); border-color: var(--sage-dk); color: white; }
+
+    .btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 20px; border: none; border-radius: 8px; font-family: 'Noto Sans TC', sans-serif; font-size: .88rem; cursor: pointer; transition: all .2s; }
+    .btn-primary { background: var(--sage-dk); color: var(--white); width: 100%; justify-content: center; margin-top: 16px; font-size: .95rem; padding: 12px; }
+    .btn-primary:hover { background: var(--sage); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-outline { background: transparent; border: 1.5px solid var(--sage); color: var(--sage-dk); }
+    .btn-outline:hover { background: var(--sage-lt); }
+    .btn-sm { padding: 6px 14px; font-size: .82rem; }
+
+    #script-text { width: 100%; min-height: 180px; padding: 14px; border: 1.5px solid var(--warm); border-radius: 8px; font-family: 'Noto Sans TC', sans-serif; font-size: .88rem; line-height: 1.7; resize: vertical; background: var(--cream); color: var(--text); }
+    .script-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+    /* 圖片區 */
+    #image-preview { width: 100%; aspect-ratio: 1; background: var(--warm); border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 14px; position: relative; }
+    #image-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+    #image-preview .placeholder { text-align: center; color: var(--muted); font-size: .85rem; }
+    #image-preview .placeholder span { font-size: 2.5rem; display: block; margin-bottom: 8px; }
+
+    /* 上傳區 */
+    .upload-zone { border: 2px dashed var(--warm); border-radius: 10px; padding: 18px; text-align: center; cursor: pointer; transition: all .2s; margin-bottom: 12px; color: var(--muted); font-size: .85rem; }
+    .upload-zone:hover { border-color: var(--sage); color: var(--sage-dk); background: var(--sage-lt); }
+    .upload-zone input { display: none; }
+    .upload-zone span.icon { font-size: 1.8rem; display: block; margin-bottom: 6px; }
+
+    .image-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    #overlay-panel { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--warm); display: none; }
+    #overlay-panel.visible { display: block; }
+
+    #prompt-badge { display: none; margin-top: 8px; padding: 8px 12px; background: var(--sage-lt); border-radius: 6px; font-size: .75rem; color: var(--sage-dk); line-height: 1.5; }
+
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--sage-dk); color: #fff; padding: 10px 24px; border-radius: 30px; font-size: .88rem; opacity: 0; transition: all .3s; pointer-events: none; z-index: 999; }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* 圖片來源切換 */
+    .img-source-tabs { display: flex; gap: 0; margin-bottom: 14px; border: 1.5px solid var(--warm); border-radius: 8px; overflow: hidden; }
+    .img-source-tab { flex: 1; padding: 8px; text-align: center; font-size: .83rem; cursor: pointer; background: var(--cream); color: var(--muted); border: none; font-family: 'Noto Sans TC', sans-serif; transition: all .2s; }
+    .img-source-tab.active { background: var(--sage-dk); color: white; }
+  </style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:1.5rem">🌿</span>
+  <h1>傾青景觀設計 · FB 貼文產生器</h1>
+</header>
+
+<main>
+
+  <!-- 左欄 -->
+  <div style="display:flex; flex-direction:column; gap:24px;">
+
+    <div class="card">
+      <h2>① 輸入主題</h2>
+
+      <label>貼文主題 / 關鍵字</label>
+      <input type="text" id="topic" placeholder="例如：春季換盆技巧、屋頂花園設計、療癒植栽牆" />
+
+      <label>貼文類型</label>
+      <select id="post-type">
+        <option value="植栽分享">🌱 植栽知識分享</option>
+        <option value="作品介紹">🏡 作品 / 案例介紹</option>
+        <option value="季節活動">🍂 季節活動 / 節慶</option>
+        <option value="設計理念">✏️ 設計理念分享</option>
+        <option value="互動問答">💬 互動問答</option>
+        <option value="品牌故事">📖 品牌故事</option>
+      </select>
+
+      <label>語氣風格</label>
+      <div class="tone-group">
+        <button class="tone-btn active" data-tone="自然親切" onclick="selectTone(this)">🌿 自然親切</button>
+        <button class="tone-btn" data-tone="專業知識" onclick="selectTone(this)">📚 專業知識</button>
+        <button class="tone-btn" data-tone="文藝詩意" onclick="selectTone(this)">🎨 文藝詩意</button>
+        <button class="tone-btn" data-tone="活潑有趣" onclick="selectTone(this)">🎉 活潑有趣</button>
+        <button class="tone-btn" data-tone="溫暖故事" onclick="selectTone(this)">💛 溫暖故事</button>
+      </div>
+
+      <button class="btn btn-primary" id="btn-generate-all" onclick="generateAll()">
+        ✨ 一鍵產生文案 + 圖片
+      </button>
+    </div>
+
+    <div class="card">
+      <h2>② 貼文文案</h2>
+      <textarea id="script-text" placeholder="產生後會顯示在這裡，你可以直接編輯修改…"></textarea>
+      <div class="script-actions">
+        <button class="btn btn-outline btn-sm" onclick="generateScript()">🔄 重新產文案</button>
+        <button class="btn btn-outline btn-sm" onclick="copyScript()">📋 複製文案</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 右欄 -->
+  <div class="card">
+    <h2>③ 配圖</h2>
+
+    <!-- 圖片來源切換 -->
+    <div class="img-source-tabs">
+      <button class="img-source-tab active" id="tab-ai" onclick="switchTab('ai')">🤖 AI 產生圖片</button>
+      <button class="img-source-tab" id="tab-upload" onclick="switchTab('upload')">📁 上傳自己的圖</button>
+    </div>
+
+    <!-- AI 產圖按鈕 -->
+    <div id="panel-ai">
+      <button class="btn btn-outline btn-sm" onclick="generateImage()" style="width:100%; justify-content:center; margin-bottom:12px;">🎨 產生 AI 圖片</button>
+    </div>
+
+    <!-- 上傳區 -->
+    <div id="panel-upload" style="display:none;">
+      <label class="upload-zone" for="file-input" id="upload-zone">
+        <input type="file" id="file-input" accept="image/*" onchange="handleFileUpload(event)" />
+        <span class="icon">🖼️</span>
+        點此選擇圖片，或拖曳圖片到這裡<br>
+        <small style="color:var(--muted)">支援 JPG、PNG、WEBP</small>
+      </label>
+    </div>
+
+    <div id="image-preview">
+      <div class="placeholder">
+        <span>🖼️</span>
+        圖片會出現在這裡
+      </div>
+    </div>
+
+    <div id="prompt-badge"></div>
+
+    <div class="image-actions">
+      <button class="btn btn-outline btn-sm" onclick="toggleOverlay()">✏️ 加文字疊加</button>
+      <button class="btn btn-outline btn-sm" id="btn-download" onclick="downloadImage()" style="display:none">⬇️ 下載圖片</button>
+    </div>
+
+    <div id="overlay-panel">
+      <label>疊加文字</label>
+      <textarea id="overlay-text" rows="2" placeholder="例如：讓綠意走進你的生活" style="width:100%;padding:10px 14px;border:1.5px solid var(--warm);border-radius:8px;font-family:'Noto Sans TC',sans-serif;font-size:.9rem;resize:vertical;background:var(--cream);margin-bottom:6px;"></textarea>
+      <button class="btn btn-outline btn-sm" onclick="fillOverlayFromScript()" style="margin-bottom:12px;">📋 從文案自動帶入</button>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label>文字位置</label>
+          <select id="overlay-position">
+            <option value="bottom">下方</option>
+            <option value="top">上方</option>
+            <option value="center">中間</option>
+          </select>
+        </div>
+        <div>
+          <label>背景樣式</label>
+          <select id="overlay-bg">
+            <option value="漸層">漸層（推薦）</option>
+            <option value="半透明">半透明色塊</option>
+            <option value="無背景">無背景</option>
+          </select>
+        </div>
+      </div>
+
+      <label style="margin-top:12px;">字體</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+        <button class="tone-btn active" data-font="正黑體" onclick="selectFont(this)">正黑體</button>
+        <button class="tone-btn" data-font="標楷體" onclick="selectFont(this)">標楷體</button>
+        <button class="tone-btn" data-font="細明體" onclick="selectFont(this)">細明體</button>
+        <button class="tone-btn" data-font="新細明體" onclick="selectFont(this)">新細明體</button>
+      </div>
+
+      <label style="margin-top:12px;">字體大小 <span id="font-size-label">50</span></label>
+      <input type="range" id="font-size" min="10" max="100" value="50"
+        oninput="document.getElementById('font-size-label').textContent=this.value"
+        style="width:100%;accent-color:var(--sage-dk);margin-top:4px;" />
+
+      <label style="margin-top:12px;">文字顏色</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;align-items:center;">
+        <button class="tone-btn active" data-color="#FFFCEB" onclick="selectColor(this)" style="background:#FFFCEB;border-color:#ccc;color:#333;">米白</button>
+        <button class="tone-btn" data-color="#FFFFFF" onclick="selectColor(this)" style="background:#fff;border-color:#ccc;color:#333;">白色</button>
+        <button class="tone-btn" data-color="#2c2c2a" onclick="selectColor(this)" style="background:#2c2c2a;color:#fff;">深色</button>
+        <button class="tone-btn" data-color="#4e7252" onclick="selectColor(this)" style="background:#4e7252;color:#fff;">墨綠</button>
+        <input type="color" id="custom-color" value="#FFFCEB" title="自訂顏色"
+          onchange="currentTextColor=this.value"
+          style="width:38px;height:34px;border:1.5px solid var(--warm);border-radius:8px;cursor:pointer;padding:2px;" />
+      </div>
+
+      <button class="btn btn-primary" onclick="applyOverlay()" style="margin-top:14px">✅ 套用文字疊加</button>
+    </div>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+  let currentImageB64 = null;
+  let currentTone = '自然親切';
+  let currentTab = 'ai';
+  let currentFont = '正黑體';
+  let currentTextColor = '#FFFCEB';
+
+  function selectFont(btn) {
+    document.querySelectorAll('[data-font]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFont = btn.dataset.font;
+  }
+
+  function selectColor(btn) {
+    document.querySelectorAll('[data-color]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTextColor = btn.dataset.color;
+    document.getElementById('custom-color').value = currentTextColor;
+  }
+
+  function toast(msg, duration = 2500) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), duration);
+  }
+
+  function selectTone(btn) {
+    document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTone = btn.dataset.tone;
+  }
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('tab-ai').classList.toggle('active', tab === 'ai');
+    document.getElementById('tab-upload').classList.toggle('active', tab === 'upload');
+    document.getElementById('panel-ai').style.display = tab === 'ai' ? 'block' : 'none';
+    document.getElementById('panel-upload').style.display = tab === 'upload' ? 'block' : 'none';
+  }
+
+  function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      currentImageB64 = e.target.result;
+      renderImage(currentImageB64);
+      document.getElementById('btn-download').style.display = 'inline-flex';
+      toast('✅ 圖片上傳完成！');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // 拖曳上傳
+  const uploadZone = document.getElementById('upload-zone');
+  if (uploadZone) {
+    uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor = 'var(--sage)'; });
+    uploadZone.addEventListener('dragleave', () => { uploadZone.style.borderColor = 'var(--warm)'; });
+    uploadZone.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadZone.style.borderColor = 'var(--warm)';
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = ev => {
+          currentImageB64 = ev.target.result;
+          renderImage(currentImageB64);
+          document.getElementById('btn-download').style.display = 'inline-flex';
+          toast('✅ 圖片上傳完成！');
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  function setLoading(btnId, loading, label) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.disabled = loading;
+    btn.innerHTML = loading ? `<span class="spinner"></span> 產生中…` : label;
+  }
+
+  async function generateAll() {
+    const topic = document.getElementById('topic').value.trim();
+    if (!topic) { toast('⚠️ 請輸入主題'); return; }
+    setLoading('btn-generate-all', true, '✨ 一鍵產生文案 + 圖片');
+    const tasks = [generateScript(true)];
+    if (currentTab === 'ai') tasks.push(generateImage(true));
+    await Promise.all(tasks);
+    setLoading('btn-generate-all', false, '✨ 一鍵產生文案 + 圖片');
+  }
+
+  async function generateScript(silent = false) {
+    const topic = document.getElementById('topic').value.trim();
+    if (!topic) { if (!silent) toast('⚠️ 請輸入主題'); return; }
+    const postType = document.getElementById('post-type').value;
+    try {
+      const res = await fetch('/generate-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic, post_type: postType, tone: currentTone })
+      });
+      const data = await res.json();
+      if (data.error) { toast('❌ ' + data.error); return; }
+      document.getElementById('script-text').value = data.script;
+      if (!silent) toast('✅ 文案產生完成！');
+    } catch (e) {
+      toast('❌ 網路錯誤：' + e.message);
+    }
+  }
+
+  async function generateImage(silent = false) {
+    const topic = document.getElementById('topic').value.trim();
+    if (!topic) { if (!silent) toast('⚠️ 請輸入主題'); return; }
+    const preview = document.getElementById('image-preview');
+    preview.innerHTML = '<div class="placeholder"><span class="spinner" style="width:40px;height:40px;border-color:rgba(0,0,0,.1);border-top-color:var(--sage);"></span><br><br>AI 生成中（約 15 秒）…</div>';
+    try {
+      const res = await fetch('/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic })
+      });
+      const data = await res.json();
+      if (data.error) {
+        preview.innerHTML = '<div class="placeholder"><span>⚠️</span>' + data.error + '</div>';
+        return;
+      }
+      currentImageB64 = data.image_b64;
+      renderImage(currentImageB64);
+      const badge = document.getElementById('prompt-badge');
+      badge.style.display = 'block';
+      badge.textContent = '🎨 圖片 Prompt：' + data.image_prompt;
+      document.getElementById('btn-download').style.display = 'inline-flex';
+      if (!silent) toast('✅ 圖片生成完成！');
+    } catch (e) {
+      preview.innerHTML = '<div class="placeholder"><span>❌</span>生成失敗：' + e.message + '</div>';
+    }
+  }
+
+  function renderImage(b64) {
+    document.getElementById('image-preview').innerHTML = `<img src="${b64}" alt="圖片" />`;
+  }
+
+  function toggleOverlay() {
+    document.getElementById('overlay-panel').classList.toggle('visible');
+  }
+
+  async function applyOverlay() {
+    if (!currentImageB64) { toast('⚠️ 請先取得圖片'); return; }
+    const text = document.getElementById('overlay-text').value.trim();
+    if (!text) { toast('⚠️ 請輸入要疊加的文字'); return; }
+    const position = document.getElementById('overlay-position').value;
+    const bgStyle  = document.getElementById('overlay-bg').value;
+    const fontSize = document.getElementById('font-size').value;
+    const color    = document.getElementById('custom-color').value || currentTextColor;
+    try {
+      const res = await fetch('/add-overlay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_b64: currentImageB64,
+          overlay_text: text,
+          position,
+          bg_style: bgStyle,
+          font_size_pct: parseInt(fontSize),
+          font_style: currentFont,
+          text_color: color,
+        })
+      });
+      const data = await res.json();
+      if (data.error) { toast('❌ ' + data.error); return; }
+      currentImageB64 = data.image_b64;
+      renderImage(currentImageB64);
+      toast('✅ 文字疊加完成！');
+    } catch (e) {
+      toast('❌ 錯誤：' + e.message);
+    }
+  }
+
+  function fillOverlayFromScript() {
+    const script = document.getElementById('script-text').value.trim();
+    if (!script) { toast('⚠️ 請先產生文案'); return; }
+    // 取第一句（到第一個句號或換行）
+    const firstLine = script.split(/[。！？\n]/)[0].replace(/^[\s🌿🌱✨💛🎉📚🎨]+/, '').trim();
+    document.getElementById('overlay-text').value = firstLine.slice(0, 30);
+    toast('✅ 已帶入文案第一句！');
+  }
+
+  function copyScript() {
+    const text = document.getElementById('script-text').value;
+    if (!text) { toast('⚠️ 還沒有文案'); return; }
+    navigator.clipboard.writeText(text).then(() => toast('✅ 已複製到剪貼簿'));
+  }
+
+  function downloadImage() {
+    if (!currentImageB64) { toast('⚠️ 還沒有圖片'); return; }
+    const a = document.createElement('a');
+    a.href = currentImageB64;
+    a.download = '傾青_FB_' + new Date().toISOString().slice(0,10) + '.png';
+    a.click();
+    toast('✅ 下載中…');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('topic').addEventListener('keydown', e => {
+      if (e.key === 'Enter') generateAll();
+    });
+  });
+</script>
+</body>
+</html>
