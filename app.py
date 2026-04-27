@@ -63,7 +63,6 @@ FONT_MAP = {
         "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
     ],
 }
-}
 
 
 def get_groq_client():
