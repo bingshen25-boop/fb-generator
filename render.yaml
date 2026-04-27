@@ -2,7 +2,7 @@ services:
   - type: web
     name: 傾青-fb-generator
     runtime: python
-    buildCommand: 建置命令：apt-get install -y fonts-noto-cjk fonts-wqy-zenhei || true && pip install -r requirements.txt
+    buildCommand: apt-get install -y fonts-noto-cjk fonts-wqy-zenhei || true && pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
       - key: FLASK_ENV
