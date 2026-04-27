@@ -37,10 +37,32 @@ TONE_MAP = {
 }
 
 FONT_MAP = {
-    "正黑體":   [r"C:\Windows\Fonts\msjhbd.ttc", r"C:\Windows\Fonts\msjh.ttc"],
-    "標楷體":   [r"C:\Windows\Fonts\kaiu.ttf"],
-    "細明體":   [r"C:\Windows\Fonts\mingliu.ttc"],
-    "新細明體": [r"C:\Windows\Fonts\simsun.ttc"],
+    "正黑體": [
+        r"C:\Windows\Fonts\msjhbd.ttc", r"C:\Windows\Fonts\msjh.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+        "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+        "/usr/share/fonts/truetype/arphic/ukai.ttc",
+    ],
+    "標楷體": [
+        r"C:\Windows\Fonts\kaiu.ttf",
+        "/usr/share/fonts/truetype/arphic/ukai.ttc",
+        "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    ],
+    "細明體": [
+        r"C:\Windows\Fonts\mingliu.ttc",
+        "/usr/share/fonts/truetype/arphic/uming.ttc",
+        "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    ],
+    "新細明體": [
+        r"C:\Windows\Fonts\simsun.ttc",
+        "/usr/share/fonts/truetype/arphic/uming.ttc",
+        "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    ],
+}
 }
 
 
