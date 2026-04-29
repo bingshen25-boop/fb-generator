@@ -257,4 +257,42 @@ def add_overlay():
                 draw.rectangle([(0,cy-block_h//2-pad),(W,cy+block_h//2+pad)], fill=(15,15,10,170))
                 ty = cy - block_h//2
             else:
-                draw.rectangle([(0,H-block_h-pad*2),(W,H)
+                draw.rectangle([(0,H-block_h-pad*2),(W,H)], fill=(15,15,10,170))
+                ty = H - block_h - pad
+        else:
+            ty = {"top":30,"center":H//2-block_h//2}.get(position, H-block_h-15)
+
+        for i, line in enumerate(lines):
+            bbox = draw.textbbox((0,0), line, font=font)
+            x = (W - (bbox[2]-bbox[0])) // 2
+            y = ty + i * line_h
+            for dx, dy in [(-2,-2),(2,-2),(-2,2),(2,2),(0,2),(2,0)]:
+                draw.text((x+dx, y+dy), line, font=font, fill=(0,0,0,140))
+            draw.text((x, y), line, font=font, fill=txt_color)
+
+        result = Image.alpha_composite(img, layer).convert("RGB")
+        buf = io.BytesIO()
+        result.save(buf, format="PNG")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        (OUTPUT_DIR / f"overlay_{timestamp}.png").write_bytes(buf.getvalue())
+
+        return jsonify({"image_b64": "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()})
+    except Exception as e:
+        return jsonify({"error": f"疊加失敗：{str(e)}"}), 500
+
+
+@app.route("/download/<filename>")
+def download(filename):
+    path = OUTPUT_DIR / filename
+    if not path.exists():
+        return "找不到檔案", 404
+    return send_file(str(path), as_attachment=True)
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5050))
+    debug = os.environ.get("FLASK_ENV") != "production"
+    print("🌿 傾青 FB 貼文產生器啟動中...")
+    if debug:
+        print(f"   請開啟瀏覽器前往 http://localhost:{port}")
+    app.run(host="0.0.0.0", port=port, debug=debug)
