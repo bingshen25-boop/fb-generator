@@ -36,11 +36,31 @@ TONE_MAP = {
     "溫暖故事": "語氣溫暖、帶有情感，像在說一個小故事，引起共鳴",
 }
 
+AUDIENCE_MAP = {
+    "住宅屋主": "目標客群是住宅屋主，他們在意居家品質、生活美學與植栽帶來的療癒感",
+    "商業空間": "目標客群是企業主或辦公室管理者，他們在意空間形象、員工福祉與來訪客戶的第一印象",
+    "餐廳咖啡廳": "目標客群是餐廳或咖啡廳業主，他們在意空間氛圍、拍照打卡吸引力與植栽帶來的質感加分",
+    "設計師建商": "目標客群是室內設計師或建商，他們在意合作專業度、施工品質與如何為客戶創造加值",
+    "植物愛好者": "目標客群是熱愛植物的一般大眾，他們在意植栽知識、品種分享與植物照顧技巧",
+}
+
+CUSTYPE_MAP = {
+    "新客": "這是針對從未接觸過傾青的潛在新客戶，重點是建立第一印象、引發興趣，讓對方開始認識品牌",
+    "舊客": "這是針對已合作過或持續關注傾青的舊客戶，重點是維繫關係、感謝支持、分享新消息或引導回購",
+}
+
+LEADTEMP_MAP = {
+    "冷": "客戶溫度為「冷」：對方對傾青完全陌生，文案重點是引起共鳴、傳遞品牌價值觀，絕對不要出現強迫推銷或要求立即購買的語氣，要像在分享美好事物一樣自然",
+    "溫": "客戶溫度為「溫」：對方已知道傾青但尚未決定合作，文案重點是建立信任感、展示專業案例與口碑，可以隱約提到可以諮詢或聯繫",
+    "熱": "客戶溫度為「熱」：對方已有意願，文案可以有明確的行動呼籲（如：私訊我們、預約諮詢、限時優惠），語氣積極、給予推動力",
+}
+
 FONT_MAP = {
     "正黑體": [
         r"C:\Windows\Fonts\msjhbd.ttc", r"C:\Windows\Fonts\msjh.ttc",
         "/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc",
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJKtc-Bold.otf",
         "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
         "/usr/share/fonts/truetype/arphic/ukai.ttc",
     ],
@@ -49,6 +69,7 @@ FONT_MAP = {
         "/usr/share/fonts/truetype/arphic/ukai.ttc",
         "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
         "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
     ],
     "細明體": [
         r"C:\Windows\Fonts\mingliu.ttc",
@@ -98,15 +119,30 @@ def generate_script():
         topic = data.get("topic", "").strip()
         post_type = data.get("post_type", "植栽分享")
         tone = data.get("tone", "自然親切")
+        audience = data.get("audience", "住宅屋主")
+        custype = data.get("custype", "新客")
+        leadtemp = data.get("leadtemp", "冷")
+        event_info = data.get("event_info", "").strip()
         if not topic:
             return jsonify({"error": "請輸入主題"}), 400
         tone_desc = TONE_MAP.get(tone, TONE_MAP["自然親切"])
+        audience_desc = AUDIENCE_MAP.get(audience, "")
+        custype_desc = CUSTYPE_MAP.get(custype, "")
+        leadtemp_desc = LEADTEMP_MAP.get(leadtemp, "")
+        user_prompt = f"""貼文類型：{post_type}
+語氣風格：{tone_desc}
+主題：{topic}
+{audience_desc}
+{custype_desc}
+{leadtemp_desc}"""
+        if event_info:
+            user_prompt += f"\n活動資訊：請將以下活動自然地融入文案：{event_info}"
         client = get_groq_client()
         resp = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": BRAND_SYSTEM},
-                {"role": "user", "content": f"貼文類型：{post_type}\n語氣風格：{tone_desc}\n主題：{topic}"},
+                {"role": "user", "content": user_prompt},
             ],
             max_tokens=1024,
         )
@@ -133,7 +169,7 @@ def generate_image():
             )}],
             max_tokens=100,
         )
-       image_prompt = pr.choices[0].message.content.strip()
+        image_prompt = pr.choices[0].message.content.strip()
         encoded = urllib.parse.quote(image_prompt)
         import requests as _req, time as _time
         img_bytes = None
@@ -167,10 +203,10 @@ def add_overlay():
         image_b64    = data.get("image_b64", "")
         overlay_text = data.get("overlay_text", "").strip()
         position     = data.get("position", "bottom")
-        font_size_pct= int(data.get("font_size_pct", 50))   # 1~100
+        font_size_pct= int(data.get("font_size_pct", 50))
         font_style   = data.get("font_style", "正黑體")
         text_color   = data.get("text_color", "#FFFCEB")
-        bg_style     = data.get("bg_style", "漸層")          # 漸層 / 半透明 / 無背景
+        bg_style     = data.get("bg_style", "漸層")
 
         if not image_b64 or not overlay_text:
             return jsonify({"error": "缺少圖片或文字"}), 400
@@ -179,7 +215,6 @@ def add_overlay():
         img = Image.open(io.BytesIO(base64.b64decode(encoded))).convert("RGBA")
         W, H = img.size
 
-        # 清除 emoji
         clean = re.sub(r'[^ -　一-鿿㐀-䶿＀-￯　-〿\w\s，。！？、：；「」（）【】—…·\-]', '', overlay_text).strip()
         if not clean:
             clean = overlay_text
@@ -197,7 +232,6 @@ def add_overlay():
         layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
         draw = ImageDraw.Draw(layer)
 
-        # 背景
         if bg_style == "漸層":
             if position == "top":
                 for y in range(grad_h):
@@ -223,43 +257,4 @@ def add_overlay():
                 draw.rectangle([(0,cy-block_h//2-pad),(W,cy+block_h//2+pad)], fill=(15,15,10,170))
                 ty = cy - block_h//2
             else:
-                draw.rectangle([(0,H-block_h-pad*2),(W,H)], fill=(15,15,10,170))
-                ty = H - block_h - pad
-        else:  # 無背景
-            ty = {"top":30,"center":H//2-block_h//2}.get(position, H-block_h-15)
-
-        # 文字
-        for i, line in enumerate(lines):
-            bbox = draw.textbbox((0,0), line, font=font)
-            x = (W - (bbox[2]-bbox[0])) // 2
-            y = ty + i * line_h
-            for dx, dy in [(-2,-2),(2,-2),(-2,2),(2,2),(0,2),(2,0)]:
-                draw.text((x+dx, y+dy), line, font=font, fill=(0,0,0,140))
-            draw.text((x, y), line, font=font, fill=txt_color)
-
-        result = Image.alpha_composite(img, layer).convert("RGB")
-        buf = io.BytesIO()
-        result.save(buf, format="PNG")
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        (OUTPUT_DIR / f"overlay_{timestamp}.png").write_bytes(buf.getvalue())
-
-        return jsonify({"image_b64": "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()})
-    except Exception as e:
-        return jsonify({"error": f"疊加失敗：{str(e)}"}), 500
-
-
-@app.route("/download/<filename>")
-def download(filename):
-    path = OUTPUT_DIR / filename
-    if not path.exists():
-        return "找不到檔案", 404
-    return send_file(str(path), as_attachment=True)
-
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5050))
-    debug = os.environ.get("FLASK_ENV") != "production"
-    print("🌿 傾青 FB 貼文產生器啟動中...")
-    if debug:
-        print(f"   請開啟瀏覽器前往 http://localhost:{port}")
-    app.run(host="0.0.0.0", port=port, debug=debug)
+                draw.rectangle([(0,H-block_h-pad*2),(W,H)
