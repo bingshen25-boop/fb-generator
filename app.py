@@ -162,9 +162,10 @@ def generate_image():
         pr = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": (
-                f"Write an English image generation prompt in 50 words or less. "
-                f"Style: Taiwan landscape design, natural light photography, plant aesthetics, "
-                f"muted natural colors, professional photography, no text. Topic: {topic}. "
+              f"Write an English image generation prompt in 50 words or less. "
+                f"Style: realistic DSLR photography, Taiwan landscape design, natural daylight, "
+                f"real plants and garden spaces, shallow depth of field, 35mm lens, "
+                f"muted natural colors, no CGI, no illustration, no text. Topic: {topic}. "
                 f"Output only the prompt."
             )}],
             max_tokens=100,
@@ -175,7 +176,7 @@ def generate_image():
         img_bytes = None
         for attempt in range(3):
             try:
-                url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&nologo=true&seed={attempt*7}"
+               url = f"https://image.pollinations.ai/prompt/{encoded}?model=flux-realism&width=1024&height=1024&nologo=true&seed={attempt*7}"
                 img_resp = _req.get(url, timeout=90)
                 if img_resp.status_code == 200 and len(img_resp.content) > 5000:
                     img_bytes = img_resp.content
